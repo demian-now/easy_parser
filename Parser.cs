@@ -21,7 +21,7 @@ namespace TestTask
         private IDocument doc;
         public Parser(string _url)
         {
-            //todo check
+            //todo check correctly url
             url = _url;
         }
 
@@ -35,7 +35,23 @@ namespace TestTask
         public List<string> GetItemLinks()
         {
             Task.WaitAll(Init());
+
+            //find number of last page
+            var check = doc.GetElementsByClassName("page-item")
+                .Select(m => m.TextContent)
+                .ToList();
+            var tmp = url.Split('=');
+
+            var check1 = Int32.Parse(tmp.Last());
+            var check2 = Int32.Parse(check[check.Count - 2]);
+
+            //if this number bigger than current number return 0 size list
+            if(check1 > check2)
+                return new List<string>(); //alt: Exception
+
+            //find all blocks with links
             var list = doc.GetElementsByClassName("d-block p-1 product-name gtm-click");
+
             return list.Cast<IHtmlAnchorElement>()
                      .Select(m => m.Href)
                      .ToList();
@@ -68,51 +84,92 @@ namespace TestTask
 
         private string ParseRegion()
         {
-            var result = doc.GetElementsByClassName("col-12 select-city-link").Select(m => m.TextContent).First();
+            var result = doc.GetElementsByClassName("col-12 select-city-link")
+                .Select(m => m.TextContent)
+                .First();
+            //remove all useless symbols
             result = result.Trim(new char[] { ' ', '\n', '\t' }).Remove(0, 10).Trim(new char[] { ' ', '\n', '\t' });
             return result;
         }
 
         private string ParseActualPrice()
         {
-            var result = doc.GetElementsByClassName("price").Select(m => m.TextContent).First();
-            return result.Remove(result.Length - 6, 5);
+            var result = doc.GetElementsByClassName("price")
+                .Select(m => m.TextContent)
+                .First();
+            //remove all useless symbols x2
+            return result.Remove(result.Length - 5, 5);
         }
         private string ParseOldPrice()
         {
             try
             {
-                var result = doc.GetElementsByClassName("old-price").Select(m => m.TextContent).First();
-                return result.Remove(result.Length - 6, 5);
+                var result = doc.GetElementsByClassName("old-price") //this block is not always there
+                    .Select(m => m.TextContent)
+                    .First();
+                //remove all useless symbols x3
+                return result.Remove(result.Length - 5, 5);
             }
             catch (Exception)
             {
-                return "equals";
+                return "equals"; //alt: get actual price in old
             }
         }
 
         private string ParseName()
         {
-            return doc.GetElementsByClassName("description").Select(m => m.TextContent).First();
+            return doc.GetElementsByClassName("detail-name")
+                .Select(m => m.TextContent)
+                .First();
         }
 
         private string ParsePath()
         {
-            return doc.GetElementsByClassName("breadcrumb").Select(m => m.TextContent).First();
+            //in my case, the breadcrumbs are distributed in several blocks
+            var list = doc.GetElementsByClassName("breadcrumb-item hide-mobile")
+                .Select(m => m.TextContent)
+                .ToList();
+            list.AddRange(doc.GetElementsByClassName("breadcrumb-item prev-active")
+                .Select(m => m.TextContent)
+                .ToList());
+            list.AddRange(doc.GetElementsByClassName("breadcrumb-item active d-none d-block")
+                .Select(m => m.TextContent)
+                .ToList());
+
+            string result = "";
+
+            foreach(string i in list)
+            {
+                result += i + ">";
+            }
+
+            return result;
         }
 
-        private bool ParseIsInStock()
+        private string ParseIsInStock()
         {
-            if (doc.GetElementsByClassName("breadcrumb").Select(m => m.TextContent).ToList().Count == 0)
-                return false;
-            return true;
+            try
+            {
+                return doc.GetElementsByClassName("ok")
+                    .Select(m => m.TextContent)
+                    .First();
+            }catch(Exception)
+            {
+                return doc.GetElementsByClassName("net-v-nalichii")
+                    .Select(m => m.TextContent)
+                    .First();
+            }
         }
 
         private List<string> ParsePictureLinks()
         {
-            var result = doc.GetElementsByClassName("img-fluid").Select(m => m.OuterHtml).ToList();
-            int size = (result.Count - 2) / 2;
+            var result = doc.GetElementsByClassName("img-fluid")
+                .Select(m => m.OuterHtml)
+                .ToList();
+            int size = (result.Count - 2) / 2; //delete logo and mini-img
             result.RemoveRange(0, size + 2);
+
+            //delete useless symbols x4
             for (int i = 0; i < result.Count; i++)
             {
                 result[i] = result[i].Remove(0, 28);

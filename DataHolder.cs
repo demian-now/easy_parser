@@ -9,14 +9,16 @@ namespace TestTask
         public string name;
         public string actualPrice;
         public string oldPrice;
-        public bool isInStock;
+        public string isInStock;
         public List<string> pictures;
         public string productLink;
 
         public string GenerateString()
         {
             string result = "";
-            result += region + "," + path + "," + name + ',' + actualPrice + ',' + oldPrice + ',' + isInStock + ',' + pictures.ToArray().ToString() + ',' + productLink;
+            string picturesLink = "";
+            pictures.ForEach(p => picturesLink += p + " | ");
+            result += region + ";" + path + ";" + name + ';' + actualPrice + ';' + oldPrice + ';' + isInStock + ';' + picturesLink + ';' + productLink;
             return result;
         }
     }

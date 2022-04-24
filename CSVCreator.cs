@@ -13,13 +13,9 @@ namespace TestTask
         }
         public CSVCreator(string _path)
         {
-            //todo check
+            //todo check correctly path
             path = _path;
             streamWriter = new StreamWriter(path);
-        }
-        ~CSVCreator()
-        {
-            streamWriter.Close();
         }
 
         public void AddString(string input)
