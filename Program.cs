@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 
 namespace TestTask
 {
@@ -7,7 +8,9 @@ namespace TestTask
         static void Main(string[] args)
         {
             int a = 1;
-            CSVCreator creator = new CSVCreator();
+            string path = "K:/TestFile.csv";
+            StreamWriter streamWriter = new StreamWriter(path);
+
             while (a < 100)
             {
                 Parser parser = new Parser("https://www.toy.ru/catalog/boy_transport/?filterseccode%5B0%5D=transport&PAGEN_8=" + a.ToString());
@@ -19,12 +22,11 @@ namespace TestTask
                 foreach (string i in list)
                 {
                     Parser parser1 = new Parser(i);
-                    creator.AddString(parser1.ParseData().GenerateString());
+                    streamWriter.WriteLineAsync(parser1.ParseData().GenerateString());
                     Console.Write(".");
                 }
 
                 a++;
-
                 Console.WriteLine();
             }
         }

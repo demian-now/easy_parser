@@ -46,7 +46,7 @@ namespace TestTask
             var check2 = Int32.Parse(check[check.Count - 2]);
 
             //if this number bigger than current number return 0 size list
-            if(check1 > check2)
+            if (check1 > check2)
                 return new List<string>(); //alt: Exception
 
             //find all blocks with links
@@ -64,13 +64,35 @@ namespace TestTask
 
             Thread[] parse = new Thread[7];
 
-            parse[0] = new Thread(() => result.region = ParseRegion());
-            parse[1] = new Thread(() => result.actualPrice = ParseActualPrice());
-            parse[2] = new Thread(() => result.oldPrice = ParseOldPrice());
-            parse[3] = new Thread(() => result.name = ParseName());
-            parse[4] = new Thread(() => result.path = ParsePath());
-            parse[5] = new Thread(() => result.isInStock = ParseIsInStock());
-            parse[6] = new Thread(() => result.pictures = ParsePictureLinks());
+            parse[0] = new Thread(() => result.region = ParseFirstByClassName("col-12 select-city-link").Trim(new char[] { ' ', '\n', '\t' }).Remove(0, 10).Trim(new char[] { ' ', '\n', '\t' }));
+            parse[1] = new Thread(() => result.actualPrice = ParseFirstByClassName("price"));
+            parse[2] = new Thread(() => result.oldPrice = ParseFirstByClassName("old-price"));
+            parse[3] = new Thread(() => result.name = ParseFirstByClassName("detail-name"));
+            parse[4] = new Thread(() => {
+                result.path = "";
+                ParseListByClassName(new string[3] { "breadcrumb-item hide-mobile", "breadcrumb-item prev-active", "breadcrumb-item active d-none d-block" }).ForEach(it => result.path += it + '>');
+            });
+            parse[5] = new Thread(() => result.isInStock = ParseFirstByClassName("ok", "net-v-nalichii"));
+            parse[6] = new Thread(() => {
+                result.pictures = ParseLinksListByClassName("img-fluid");
+                result.pictures.RemoveRange(0, result.pictures.Count / 2+1);
+                for (int i = 0; i < result.pictures.Count; i++)
+                {
+                    result.pictures[i] = result.pictures[i].Remove(0, 28);
+                    int count = 0;
+                    for (int j = result.pictures[i].Length - 1; j > 0; j--)
+                    {
+                        if (result.pictures[i][j] == '\"')
+                            count++;
+                        if (count == 3)
+                        {
+                            result.pictures[i] = result.pictures[i].Remove(j, result.pictures[i].Length - j);
+                            break;
+                        }
+                    }
+                }
+            }
+            );
 
             foreach (Thread p in parse)
                 p.Start();
@@ -78,113 +100,72 @@ namespace TestTask
                 p.Join();
 
             result.productLink = url;
-
             return result;
         }
 
-        private string ParseRegion()
-        {
-            var result = doc.GetElementsByClassName("col-12 select-city-link")
-                .Select(m => m.TextContent)
-                .First();
-            //remove all useless symbols
-            result = result.Trim(new char[] { ' ', '\n', '\t' }).Remove(0, 10).Trim(new char[] { ' ', '\n', '\t' });
-            return result;
-        }
-
-        private string ParseActualPrice()
-        {
-            var result = doc.GetElementsByClassName("price")
-                .Select(m => m.TextContent)
-                .First();
-            //remove all useless symbols x2
-            return result.Remove(result.Length - 5, 5);
-        }
-        private string ParseOldPrice()
+        private string ParseFirstByClassName(string className)
         {
             try
             {
-                var result = doc.GetElementsByClassName("old-price") //this block is not always there
+                return doc.GetElementsByClassName(className)
                     .Select(m => m.TextContent)
                     .First();
-                //remove all useless symbols x3
-                return result.Remove(result.Length - 5, 5);
             }
             catch (Exception)
             {
-                return "equals"; //alt: get actual price in old
+                return "-";
             }
         }
 
-        private string ParseName()
-        {
-            return doc.GetElementsByClassName("detail-name")
-                .Select(m => m.TextContent)
-                .First();
-        }
-
-        private string ParsePath()
-        {
-            //in my case, the breadcrumbs are distributed in several blocks
-            var list = doc.GetElementsByClassName("breadcrumb-item hide-mobile")
-                .Select(m => m.TextContent)
-                .ToList();
-            list.AddRange(doc.GetElementsByClassName("breadcrumb-item prev-active")
-                .Select(m => m.TextContent)
-                .ToList());
-            list.AddRange(doc.GetElementsByClassName("breadcrumb-item active d-none d-block")
-                .Select(m => m.TextContent)
-                .ToList());
-
-            string result = "";
-
-            foreach(string i in list)
-            {
-                result += i + ">";
-            }
-
-            return result;
-        }
-
-        private string ParseIsInStock()
+        private string ParseFirstByClassName(string className1, string className2)
         {
             try
             {
-                return doc.GetElementsByClassName("ok")
+                return doc.GetElementsByClassName(className1)
                     .Select(m => m.TextContent)
                     .First();
-            }catch(Exception)
+            }
+            catch (Exception)
             {
-                return doc.GetElementsByClassName("net-v-nalichii")
+                return doc.GetElementsByClassName(className2)
                     .Select(m => m.TextContent)
                     .First();
             }
         }
 
-        private List<string> ParsePictureLinks()
+        private List<string> ParseListByClassName(string className)
         {
-            var result = doc.GetElementsByClassName("img-fluid")
-                .Select(m => m.OuterHtml)
-                .ToList();
-            int size = (result.Count - 2) / 2; //delete logo and mini-img
-            result.RemoveRange(0, size + 2);
-
-            //delete useless symbols x4
-            for (int i = 0; i < result.Count; i++)
+            try
             {
-                result[i] = result[i].Remove(0, 28);
-                int count = 0;
-                for (int j = result[i].Length - 1; j > 0; j--)
-                {
-                    if (result[i][j] == '\"')
-                        count++;
-                    if (count == 3)
-                    {
-                        result[i] = result[i].Remove(j, result[i].Length - j);
-                        break;
-                    }
-                }
+                return doc.GetElementsByClassName(className)
+                    .Select(m => m.TextContent)
+                    .ToList();
             }
+            catch (Exception)
+            {
+                return new List<string>();
+            }
+        }
+
+        private List<string> ParseLinksListByClassName(string className)
+        {
+            try
+            {
+                return doc.GetElementsByClassName(className)
+                    .Select(m => m.OuterHtml)
+                    .ToList();
+            }
+            catch (Exception)
+            {
+                return new List<string>();
+            }
+        }
+
+        private List<string> ParseListByClassName(string[] className)
+        {
+            var result = new List<string>();
+            for (int i = 0; i < className.Length; i++)
+                result.AddRange(ParseListByClassName(className[i]));
             return result;
         }
     }
